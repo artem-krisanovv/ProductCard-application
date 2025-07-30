@@ -1,11 +1,11 @@
 import UIKit
 
-import UIKit
-
 class TableCell: UITableViewCell {
     static let identifier = "historyCell"
     
     var onDelete: (() -> Void)?
+    
+    // MARK: - Init
     
     override init(style: UITableViewCell.CellStyle, reuseIdentifier: String?) {
         super.init(style: style, reuseIdentifier: reuseIdentifier)
@@ -15,6 +15,8 @@ class TableCell: UITableViewCell {
     required init?(coder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
     }
+    
+    // MARK: - UI Elements
     
     private let titleLabel: UILabel = {
         let label = UILabel()
@@ -33,6 +35,8 @@ class TableCell: UITableViewCell {
         return button
     }()
     
+    // MARK: - Setup UI
+    
     func setupUI() {
         contentView.addSubview(titleLabel)
         contentView.addSubview(deleteButton)
@@ -48,12 +52,15 @@ class TableCell: UITableViewCell {
             deleteButton.widthAnchor.constraint(equalToConstant: 15),
             deleteButton.heightAnchor.constraint(equalToConstant: 15),
         ])
-        
     }
+    
+    // MARK: - Configure UI
     
     func configure(with data: String) {
         titleLabel.text = data
     }
+    
+    // MARK: - Delete Method
     
     @objc private func deleteButtonTapped() {
         onDelete?()

@@ -1,6 +1,6 @@
 import Foundation
 
-class ViewModel {
+final class ViewModel {
     
     var cellList: [CellModel] = []
     private var originalData: [CellModel] = []

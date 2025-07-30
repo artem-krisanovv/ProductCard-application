@@ -3,6 +3,8 @@ import UIKit
 class CollectionCell: UICollectionViewCell {
     static let identifier = "cell"
     
+    // MARK: - Init
+    
     override init(frame: CGRect) {
         super.init(frame: frame)
         setupUI()
@@ -11,6 +13,8 @@ class CollectionCell: UICollectionViewCell {
     required init?(coder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
     }
+    
+    // MARK: - UI Elements
 
     private let imageView: UIImageView = {
         let iv = UIImageView()
@@ -38,6 +42,7 @@ class CollectionCell: UICollectionViewCell {
         return label
     }()
     
+    // MARK: - Setup UI
     
     func setupUI() {
         contentView.addSubview(imageView)
@@ -62,8 +67,9 @@ class CollectionCell: UICollectionViewCell {
             priceLabel.trailingAnchor.constraint(equalTo: nameLabel.trailingAnchor),
             priceLabel.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -16)
         ])
-        
     }
+    
+    // MARK: - Configure UI
     
     func configure(with data: CellModel) {
         nameLabel.text = data.name

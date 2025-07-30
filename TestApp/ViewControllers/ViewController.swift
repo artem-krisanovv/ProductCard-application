@@ -1,4 +1,3 @@
-
 import UIKit
 
 class ViewController: UIViewController {
@@ -8,7 +7,7 @@ class ViewController: UIViewController {
     private var isSortAscending = true
     private let viewModel = ViewModel()
     private var searchHistoryViewBottomConstraint: NSLayoutConstraint!
-
+    
     // MARK: - Lifecycle
     
     override func viewDidLoad() {
@@ -59,7 +58,7 @@ class ViewController: UIViewController {
         iconName: "line.3.horizontal.decrease",
         style: .filter(count: 2)
     )
-
+    
     private let collectionView: UICollectionView = {
         let layout = UICollectionViewFlowLayout()
         layout.itemSize = CGSize(width: 172, height: 189)
@@ -182,7 +181,7 @@ extension ViewController: UITableViewDataSource, UITableViewDelegate {
     }
     
     func tableView(_ tableView: UITableView, titleForHeaderInSection section: Int) -> String? {
-       return "Recent Searches"
+        return "Recent Searches"
     }
     
     func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
