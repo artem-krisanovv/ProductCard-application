@@ -5,6 +5,8 @@ import UIKit
 class TableCell: UITableViewCell {
     static let identifier = "historyCell"
     
+    var onDelete: (() -> Void)?
+    
     override init(style: UITableViewCell.CellStyle, reuseIdentifier: String?) {
         super.init(style: style, reuseIdentifier: reuseIdentifier)
         setupUI()
@@ -34,6 +36,7 @@ class TableCell: UITableViewCell {
     func setupUI() {
         contentView.addSubview(titleLabel)
         contentView.addSubview(deleteButton)
+        deleteButton.addTarget(self, action: #selector(deleteButtonTapped), for: .touchUpInside)
         
         NSLayoutConstraint.activate([
             titleLabel.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 16),
@@ -50,6 +53,10 @@ class TableCell: UITableViewCell {
     
     func configure(with data: String) {
         titleLabel.text = data
+    }
+    
+    @objc private func deleteButtonTapped() {
+        onDelete?()
     }
 }
 

@@ -3,9 +3,11 @@ import UIKit
 
 class ViewController: UIViewController {
     
-    private var isSearchHisroryHidden = false
+    // MARK: - Private Properties
+    
     private var isSortAscending = true
     private let viewModel = ViewModel()
+    private var searchHistoryViewBottomConstraint: NSLayoutConstraint!
 
     // MARK: - Lifecycle
     
@@ -14,6 +16,7 @@ class ViewController: UIViewController {
         collectionView.dataSource = self
         historyTableView.dataSource = self
         historyTableView.delegate = self
+        searchTextField.delegate = self
         setupUI()
         bindViewModel()
         addTargetToSortButton()
@@ -80,7 +83,6 @@ class ViewController: UIViewController {
         tableView.showsVerticalScrollIndicator = false
         return tableView
     }()
-
 }
 
 // MARK: - Setup UI
@@ -92,16 +94,26 @@ extension ViewController {
             $0.translatesAutoresizingMaskIntoConstraints = false
             view.addSubview($0)
         }
+        let tapGesture = UITapGestureRecognizer(target: self, action: #selector(handleTapGesture(_:)))
+        tapGesture.delegate = self
+        view.addGestureRecognizer(tapGesture)
         
-        searchHistoryView.isHidden = isSearchHisroryHidden
-        historyTableView.isHidden = isSearchHisroryHidden
+        searchHistoryView.isHidden = true
+        historyTableView.isHidden = true
         
-    
+        NotificationCenter.default.addObserver(self, selector: #selector(keyboardWillShow(_:)), name: UIResponder.keyboardWillShowNotification, object: nil)
+        NotificationCenter.default.addObserver(self, selector: #selector(keyboardWillHide(_:)), name: UIResponder.keyboardWillHideNotification, object: nil)
+        
         setupConstraints()
         
     }
     
     private func setupConstraints() {
+        searchHistoryViewBottomConstraint = searchHistoryView.bottomAnchor.constraint(equalTo: view.bottomAnchor)
+        let maxRows = min(viewModel.searchHistory.count, 5)
+        let rowHeight: CGFloat = 80
+        let tableHeight = CGFloat(maxRows) * rowHeight
+        
         NSLayoutConstraint.activate([
             searchTextField.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 15),
             searchTextField.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -15),
@@ -126,17 +138,14 @@ extension ViewController {
             searchHistoryView.topAnchor.constraint(equalTo: searchTextField.bottomAnchor, constant: 10),
             searchHistoryView.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 0),
             searchHistoryView.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: 0),
-            searchHistoryView.bottomAnchor.constraint(equalTo: view.bottomAnchor),
+            searchHistoryViewBottomConstraint,
             
             historyTableView.topAnchor.constraint(equalTo: searchTextField.bottomAnchor, constant: 10),
             historyTableView.leadingAnchor.constraint(equalTo: searchHistoryView.leadingAnchor, constant: 16),
             historyTableView.trailingAnchor.constraint(equalTo: searchHistoryView.trailingAnchor, constant: -16),
-            historyTableView.bottomAnchor.constraint(equalTo: searchHistoryView.bottomAnchor)
-            
-            
-            
-            
+            historyTableView.heightAnchor.constraint(equalToConstant: tableHeight)
         ])
+        
     }
 }
 
@@ -156,7 +165,7 @@ extension ViewController: UICollectionViewDataSource {
     
 }
 
-// MARK: - Table Delegate/
+// MARK: - Table Delegate
 
 extension ViewController: UITableViewDataSource, UITableViewDelegate {
     func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
@@ -166,6 +175,9 @@ extension ViewController: UITableViewDataSource, UITableViewDelegate {
     func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         let cell = tableView.dequeueReusableCell(withIdentifier: TableCell.identifier, for: indexPath) as! TableCell
         cell.configure(with: viewModel.searchHistory[indexPath.row])
+        cell.onDelete = { [weak self] in
+            self?.deleteHistoryItem(at: indexPath)
+        }
         return cell
     }
     
@@ -175,8 +187,74 @@ extension ViewController: UITableViewDataSource, UITableViewDelegate {
     
     func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
         tableView.deselectRow(at: indexPath, animated: true)
+        
+        let selectedQuery = viewModel.searchHistory[indexPath.row]
+        searchTextField.text = selectedQuery
+        
+        viewModel.filterProducts(with: selectedQuery, forceFilter: true)
+        
+        hideSearchHistory()
+        searchTextField.resignFirstResponder()
+    }
+    private func deleteHistoryItem(at indexPath: IndexPath) {
+        guard indexPath.row < viewModel.searchHistory.count else { return }
+        
+        viewModel.searchHistory.remove(at: indexPath.row)
+        
+        if viewModel.searchHistory.isEmpty {
+            hideSearchHistory()
+        } else {
+            historyTableView.reloadData()
+        }
+    }
+}
+
+// MARK: - TextField Delegate
+
+extension ViewController: UITextFieldDelegate {
+    
+    func textFieldDidBeginEditing(_ textField: UITextField) {
+        showSearchHistory()
     }
     
+    func textField(_ textField: UITextField, shouldChangeCharactersIn range: NSRange, replacementString string: String) -> Bool {
+        let newText = (textField.text as NSString?)?.replacingCharacters(in: range, with: string) ?? string
+        
+        if newText.count >= 3 {
+            viewModel.filterProducts(with: newText)
+        } else if newText.isEmpty {
+            viewModel.showAllProducts()
+        }
+        
+        return true
+    }
+    
+    func textFieldShouldReturn(_ textField: UITextField) -> Bool {
+        guard let searchText = textField.text, !searchText.isEmpty else { return true }
+        
+        viewModel.addToSearchHistory(searchText)
+        viewModel.filterProducts(with: searchText)
+        
+        hideSearchHistory()
+        textField.resignFirstResponder()
+        
+        return true
+    }
+    
+    func textFieldDidEndEditing(_ textField: UITextField) {
+        hideSearchHistory()
+    }
+}
+
+// MARK: - Gesture Delegate
+
+extension ViewController: UIGestureRecognizerDelegate {
+    func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldReceive touch: UITouch) -> Bool {
+        if touch.view?.isDescendant(of: historyTableView) == true {
+            return false
+        }
+        return true
+    }
 }
 
 
@@ -194,6 +272,48 @@ extension ViewController {
     }
 }
 
+// MARK: - KeyBoard and TextField Methods
+
+extension ViewController {
+    @objc private func keyboardWillShow(_ notification: Notification) {
+        guard let userInfo = notification.userInfo,
+              let keyboardFrame = userInfo[UIResponder.keyboardFrameEndUserInfoKey] as? CGRect,
+              let duration = userInfo[UIResponder.keyboardAnimationDurationUserInfoKey] as? Double else { return }
+        let keyboardHeight = keyboardFrame.height
+        
+        searchHistoryViewBottomConstraint.constant = -keyboardHeight
+        UIView.animate(withDuration: duration) {
+            self.view.layoutIfNeeded()
+        }
+    }
+    
+    @objc private func keyboardWillHide(_ notification: Notification) {
+        guard let userInfo = notification.userInfo,
+              let duration = userInfo[UIResponder.keyboardAnimationDurationUserInfoKey] as? Double else { return }
+        
+        searchHistoryViewBottomConstraint.constant = 0
+        UIView.animate(withDuration: duration) {
+            self.view.layoutIfNeeded()
+        }
+    }
+    
+    @objc func handleTapGesture(_ gesture: UITapGestureRecognizer) {
+        searchTextField.resignFirstResponder()
+        hideSearchHistory()
+    }
+    
+    private func showSearchHistory() {
+        searchHistoryView.isHidden = false
+        historyTableView.isHidden = false
+        historyTableView.reloadData()
+    }
+    
+    private func hideSearchHistory() {
+        searchHistoryView.isHidden = true
+        historyTableView.isHidden = true
+    }
+}
+
 // MARK: - Bind ViewModel
 
 extension ViewController {
@@ -207,6 +327,3 @@ extension ViewController {
     }
 }
 
-#Preview {
-    ViewController()
-}
